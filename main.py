@@ -1,0 +1,220 @@
+import tkinter as tk
+import speech_recognition as sr
+from PIL import Image
+from PIL import ImageTk
+import webbrowser
+import io
+
+#PICTURE RESIZING
+global ihs 
+ihs = Image.open("wall.jpg")
+ihs = ihs.resize((1550, 820), Image.ANTIALIAS)
+
+global jp
+jp = Image.open("hom.png")
+jp = jp.resize((50, 50), Image.ANTIALIAS)
+
+def out():              
+    to=entry1.get()
+    conversion(to)
+
+def file():
+    webbrowser.open("brsav.txt")    
+
+#SPEECH CONVERSION
+def speech():                                                                   
+    r = sr.Recognizer()     
+    with sr.Microphone() as source:                                                                       
+        print("Speak:")                                                                                   
+        audio = r.listen(source)   
+        print("time's up")
+    try:
+        ti=r.recognize_google(audio)   
+        print(ti) 
+        return (conversion(ti))
+    except sr.UnknowValueError:
+        print("could not undertsand audio") 
+    
+#CONVERSION
+def conversion(t):
+    buttond.invoke()
+    l['text']=""
+    f=open('br.txt','r')
+    fn=open('brnum.txt','r')
+    read=f.readlines()
+    readnum=fn.readlines()
+    o=' '
+    disp=' '
+    if all(x.isalnum() or x.isspace() or  x in [',',';','?','!','-'] for x in list(t)):
+        disp='text to braille:'
+        for i in (list(t)):
+            if i.isdigit():
+                for j in readnum:
+                    if i in j[0:1]:
+                        p=j[2:-1].encode('utf-8')
+                        o=o+u'\u283C'+p.decode('unicode-escape')
+            elif i.isspace():
+                o=o+" "
+            else:
+                for j in read:
+                    if i.lower() in j[0:1]:
+                        p=j[2:-1].encode('utf-8')
+                        o=o+p.decode('unicode-escape')  
+            
+    else:
+        disp='braille to text:'
+        for i in (list(t)):
+            for j in read:
+                if ascii(i)[1:-1] in j:
+                    o=o+j[0:1]
+    l['text']=disp+o   
+
+    #FILE SAVING
+    with io.open('brsav.txt', "a", encoding="utf-8") as fs:
+        fs.write(t)
+        fs.write(o)
+        fs.write('\n')
+
+#PAGES
+class Braille(tk.Tk):
+
+    def __init__(self, *args, **kwargs):
+        
+        tk.Tk.__init__(self, *args, **kwargs)
+        container = tk.Frame(self)
+
+        container.pack(side="top", fill="both", expand = True)
+
+        container.grid_rowconfigure(0, weight=1)
+        container.grid_columnconfigure(0, weight=1)
+
+        self.frames = {}
+
+        for F in (StartPage, PageOne, PageTwo,Display):
+
+            frame = F(container, self)
+
+            self.frames[F] = frame
+
+            frame.grid(row=0, column=0, sticky="nsew")
+
+        self.show_frame(StartPage)
+
+    def show_frame(self, cont):
+
+        frame = self.frames[cont]
+        frame.tkraise()
+
+
+#HOME PAGE
+class StartPage(tk.Frame):
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self,parent,bg='black')
+
+        #WALLPAPER CANVAS
+        self.img1= ImageTk.PhotoImage(ihs)  
+        c=tk.Canvas(self,borderwidth=0,highlightthickness=0)
+        c.pack(fill='both',expand=True)
+        bg=c.create_image(0,0,image=self.img1,anchor=tk.NW) 
+        
+        #WIDGETS
+        label = tk.Label(c, text="HOME",bg='black',fg='white',font='Helvetica 18 bold')
+        label.pack(pady=10,padx=10)
+        
+        button = tk.Button(c, text="Text page",bg='black',fg='cornflower blue',width=13,height=1,font='15',command=lambda: controller.show_frame(PageOne))                                
+        button.pack(pady=10,padx=10)
+
+        button2 = tk.Button(c, text="Speech Page",bg='black',fg='cornflower blue',width=13,height=1,command=lambda: controller.show_frame(PageTwo),font='15')
+        button2.pack(pady=10,padx=10)
+        
+        fileop=tk.Button(c,text="Open Save File",bg='black',fg='cornflower blue',width=13,height=1,command=file,font='15')
+        fileop.pack(pady=10,padx=10)
+        
+        global buttond
+        buttond = tk.Button(self, text="Display page",bg='black',fg='cornflower blue',width=13,height=1,command=lambda: controller.show_frame(Display),font='15')
+             
+#TEXT PAGE
+class PageOne(tk.Frame):
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent,bg='black')
+
+        #WALLPAPER CANVAS
+        self.img1= ImageTk.PhotoImage(ihs)  
+        c=tk.Canvas(self,borderwidth=0,highlightthickness=0)
+        c.pack(fill='both',expand=True)
+        bg=c.create_image(0,0,image=self.img1,anchor=tk.NW)
+
+        #WIDGETS
+        label = tk.Label(c, text="Text Conversion",bg='black',fg='white',font='Helvetica 18 bold')
+        label.pack(pady=10,padx=10)
+
+        global entry1
+        entry1 = tk.Entry(c,width=25,justify='center',bg='black',fg='cornflower blue',font='6')
+        entry1.pack(pady=10,padx=10)
+        
+        butcon=tk.Button(c,text="CONVERT",bg='black',fg='cornflower blue',width=13,height=1,command=out,font='15')
+        butcon.pack(pady=10,padx=10)
+
+        self.img2= ImageTk.PhotoImage(jp)
+        button1 = tk.Button(c, text="Back to Home",highlightthickness=0,borderwidth=0,image=self.img2,command=lambda: controller.show_frame(StartPage))
+        button1.pack(pady=10,padx=10)
+
+#SPEECH PAGE
+class PageTwo(tk.Frame):
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent,bg='black')
+
+        #WALLPAPER CANVAS
+        self.img1= ImageTk.PhotoImage(ihs)  
+        c=tk.Canvas(self,borderwidth=0,highlightthickness=0)
+        c.pack(fill='both',expand=True)
+        bg=c.create_image(0,0,image=self.img1,anchor=tk.NW)
+        
+        #WIDGETS
+        label = tk.Label(c, text="Speech Page",bg='black',fg='white',font='Helvetica 18 bold')
+        label.pack(pady=10,padx=10)
+
+        pn = Image.open("spee.jpg")
+        pn = pn.resize((125, 75), Image.ANTIALIAS)
+        self.img = ImageTk.PhotoImage(pn)
+
+        spbutton=tk.Button(c,text='convert',image=self.img,command=speech,highlightthickness=0,borderwidth=0)
+        spbutton.pack(pady=10,padx=10)
+
+        self.img2= ImageTk.PhotoImage(jp)    
+        button1 = tk.Button(c, text="Back to Home",image=self.img2,highlightthickness=0,borderwidth=0,command=lambda: controller.show_frame(StartPage))
+        button1.pack(pady=10,padx=10)
+
+#DISPLAY PAGE        
+class Display(tk.Frame):
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent,bg='black')
+
+        #WALLPAPER CANVAS
+        self.img1= ImageTk.PhotoImage(ihs)  
+        c=tk.Canvas(self,borderwidth=0,highlightthickness=0)
+        c.pack(fill='both',expand=True)
+        bg=c.create_image(0,0,image=self.img1,anchor=tk.NW)
+
+        #WIDGETS
+        label = tk.Label(c, text="Display",bg='black',fg='white',font='Helvetica 18 bold')
+        label.pack(pady=10,padx=10)
+
+        global l
+        l=tk.Label(c,bg='black',fg='cornflower blue',font='12')
+        l.pack(pady=10,padx=10)
+
+        fileop=tk.Button(c,text="Open Save File",bg='black',fg='cornflower blue',width=13,height=1,command=file,font='10')
+        fileop.pack(pady=10,padx=10)
+        
+        self.img2= ImageTk.PhotoImage(jp)
+        button1 = tk.Button(c, text="Back to Home",highlightthickness=0,borderwidth=0,image=self.img2,command=lambda: controller.show_frame(StartPage))
+        button1.pack(pady=10,padx=10)
+
+app = Braille()
+app.mainloop()
+
